@@ -1,5 +1,4 @@
-// Please forgive the sloppy code.
-// I made this in one evening. We all got these.
+#include "json/src/json.hpp"
 
 #include <algorithm>
 
@@ -21,10 +20,12 @@
 
 #include <time.h>
 
-#include <libconfig.h++>
-
 #include <unordered_map>
 #include <vector>
+
+#include <iostream>
+#include <fstream>
+#include <ostream>
 
 #define true 1
 #define false 0
@@ -37,9 +38,8 @@
 // The keyboard device file descriptor
 int kbfd;
 
-// Configuration to read/write
-using namespace libconfig;
-Config lcConfig;
+// JSON configuration
+using json = nlohmann::json;
 
 const char* short_opt = "d:c:l:";
 struct option long_opt[] =
@@ -223,33 +223,32 @@ int main(const int argc, char* const* argv)
 	// Load your config
 	if (!configuring)
 	{
-		Config config;
-		config.readFile(keymapFile);
+		// Get input stream for file
+		std::fstream kFileStream;
+		kFileStream.open(keymapFile);
 
-		onehandModKeyCode = config.lookup("onehandModKeyCode");
-		onehandModKeyValue = config.lookup("onehandModKeyValue");
+		try {
+			auto config = json::parse(kFileStream);
 
-		Setting& codes = config.lookup("codes");
-		for (auto c=codes.begin();c!=codes.end();++c)
-		{
-			std::string name = c->getName();
+			onehandModKeyCode = config["onehandModKeyCode"];
+			onehandModKeyValue = config["onehandModKeyValue"];
 
-			int codeKey = std::stoi(name.substr(1));
-			int codeValue = int(*c);
+			auto codes = config["codes"];
+			for (auto it=codes.begin();it!=codes.end();++it)
+				codeMap[std::stoi(it.key())] = it.value();
 
-			codeMap[codeKey] = codeValue;
+			auto values = config["values"];
+			for (auto it=values.begin();it!=values.end();++it)
+				valueMap[std::stoi(it.key())] = it.value();
 		}
 
-		Setting& values = config.lookup("values");
-		for (auto v=values.begin();v!=values.end();++v)
-		{
-			std::string name = v->getName();
-
-			int valueKey = std::stoi(name.substr(1));
-			int valueValue = int(*v);
-
-			valueMap[valueKey] = valueValue;
+		catch (std::exception) {
+			fprintf(stderr, "Failed to parse user configuration file\n");
+			kFileStream.close();
+			return -1;
 		}
+
+		kFileStream.close();
 	}
 
 	// Start read loop
@@ -442,22 +441,29 @@ int main(const int argc, char* const* argv)
 	// Write config to file if configuring
 	if (configuring)
 	{
-		Setting& root = lcConfig.getRoot();
+		json configRoot;
 
-		root.add("onehandModKeyCode", Setting::TypeInt) = onehandModKeyCode;
-		root.add("onehandModKeyValue", Setting::TypeInt) = onehandModKeyValue;
+		configRoot["onehandModKeyCode"] = onehandModKeyCode;
+		configRoot["onehandModKeyValue"] = onehandModKeyValue;
 
-		Setting& codes = root.add("codes", Setting::TypeGroup);
+		auto codes = json::object();
+		for (const auto& kv : codeMap)
+			codes[std::to_string(kv.first)] = kv.second;
 
-		for (auto itr : codeMap)
-			codes.add("c" + std::to_string(itr.first), Setting::TypeInt) = itr.second;
+		configRoot["codes"] = codes;
 
-		Setting& values = root.add("values", Setting::TypeGroup);
+		auto values = json::object();
+		for (const auto& kv : valueMap)
+			values[std::to_string(kv.first)] = kv.second;
 
-		for (auto itr : valueMap)
-			values.add("v" + std::to_string(itr.first), Setting::TypeInt) = itr.second;
+		configRoot["values"] = values;
 
-		lcConfig.writeFile(keymapFile);
+		std::ofstream outStream;
+		outStream.open(keymapFile, std::ios::out);
+
+		configRoot >> outStream;
+
+		outStream.close();
 	}
 
 	ioctl(kbfd, EVIOCGRAB, 0);
