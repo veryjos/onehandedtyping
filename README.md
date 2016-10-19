@@ -14,16 +14,17 @@ If something goes wrong, you might have to ssh in and kill the program or plug i
 ## Building
 
 Requirements:
-* libconfig++
-```bash
-sudo apt-get install libconfig++-dev
-```
 * uinput module
 * g++ with c++11 support
 
-The uinput module comes boxed with most versions of the Linux kernel, but you might have to enable it explicitly.
+The uinput module comes boxed with most versions of the Linux kernel, but you might have to enable it explicitly. You can find instructions online.
 
-Run ./build.sh and a binary file "onehand" should pop out.
+Run the following and a binary file "onehand" should pop out.
+```
+git submodule init
+git submodule update
+./build.sh
+```
 
 
 ## Usage
@@ -37,7 +38,7 @@ cat /proc/bus/input/devices
 
 *example*
 ```bash
-sudo onehand --device /dev/input/eventX --configure ~/.onehand
+sudo onehand --device /dev/input/<device event name> --configure ~/.onehand
 ```
 
 * Follow the onscreen prompts. The first key you press will be your modifier key. When you're done configuring, the modifier key will rebind keys on your keyboard while you hold it.
@@ -55,5 +56,5 @@ sudo onehand --device /dev/input/eventX --configure ~/.onehand
 
 *example*
 ```bash
-sudo onehand --device /dev/input/eventX --load ~/.onehand
+sudo onehand --device /dev/input/<device event name> --load ~/.onehand
 ```
