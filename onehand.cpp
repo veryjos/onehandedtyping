@@ -226,6 +226,13 @@ int main(const int argc, char* const* argv)
 		// Get input stream for file
 		std::fstream kFileStream;
 		kFileStream.open(keymapFile);
+		
+		if(!kFileStream.good())
+		{
+			fprintf(stderr, "The file is not in good condition.\n");
+			kFileStream.close();
+			return -1;
+		}
 
 		try {
 			auto config = json::parse(kFileStream);
