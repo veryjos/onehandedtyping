@@ -245,7 +245,8 @@ int main(const int argc, char* const* argv)
 		catch (std::exception) {
 			fprintf(stderr, "Failed to parse user configuration file\n");
 			kFileStream.close();
-			return -1;
+
+      exit(1);
 		}
 
 		kFileStream.close();
