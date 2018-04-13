@@ -231,7 +231,7 @@ int main(const int argc, char* const* argv)
 		{
 			fprintf(stderr, "The file is not in good condition.\n");
 			kFileStream.close();
-			return -1;
+			exit(1);
 		}
 
 		try {
